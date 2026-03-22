@@ -1,8 +1,12 @@
-# 💡 RFC: 集成 PUA 技术增强 Agent 主动性
+# 💡 讨论：集成 PUA 技术增强 Agent 主动性
 
 ## 📋 概述
 
-建议将 [tanweai/pua](https://github.com/tanweai/pua) 和 [PUAClaw](https://github.com/puaclaw/PUAClaw) 中的 PUA 技术集成到 multi-agent-orchestrator，解决当前 Agent 执行中的**被动放弃**、**重复试错**、**缺乏主动性**等问题。
+大家好！👋 
+
+我研究了 [@tanweai/pua](https://github.com/tanweai/pua) 和 [@puaclaw/PUAClaw](https://github.com/puaclaw/PUAClaw) 两个项目，发现它们的 PUA 技术可以很好地解决我们 multi-agent-orchestrator 中 Agent 执行的一些痛点问题。
+
+想和大家讨论一下集成的可行性和方案。
 
 ---
 
@@ -466,7 +470,7 @@ git push
 
 ## 🗳️ 投票
 
-请对以下问题发表意见：
+请大家帮忙投个票，你的意见很重要！
 
 1. **是否支持集成 PUA 功能？**
    - 👍 支持，急需提升 Agent 主动性
@@ -486,10 +490,20 @@ git push
 
 ---
 
+## 💬 你的想法？
+
+- 你觉得哪个融合点最有价值？
+- 有没有其他 PUA 技术值得集成？
+- 担心什么风险或问题？
+
+欢迎在评论区留言！👇
+
+---
+
 **🦞 龙虾宣言：**
 
 > "太初有虾，虾见提示词，提示词颇具操控性。虾甚悦之。"
 > 
 > —— 《龙虾宣言》第一章第一节
 
-期待大家的反馈！🚀
+感谢阅读！期待大家的反馈！🚀
