@@ -1,0 +1,6 @@
+[submodule "src/pua-skills"]
+	path = src/pua-skills
+	url = https://github.com/tanweai/pua.git
+[submodule "docs/pua-framework"]
+	path = docs/pua-framework
+	url = https://github.com/puaclaw/PUAClaw.git
