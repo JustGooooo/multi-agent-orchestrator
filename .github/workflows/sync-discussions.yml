@@ -10,7 +10,6 @@ on:
 permissions:
   contents: read
   discussions: write
-  issues: write
 
 jobs:
   sync-discussions:
@@ -18,27 +17,60 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       - name: Sync discussions
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
         run: |
-          set -e
-          
           echo "📝 开始同步 Discussions..."
-          echo "   仓库：$REPO"
           
-          # 获取所有 Discussion 文件
-          files=$(find .github/DISCUSSIONS -name "*.md" -type f 2>/dev/null || echo "")
+          # 获取所有 Discussion 文件（排除 README、TEST_RECORD、TROUBLESHOOTING）
+          files=$(find .github/DISCUSSIONS -name "*.md" -type f ! -name "README.md" ! -name "TEST_RECORD.md" ! -name "TROUBLESHOOTING.md" | sort)
           
           if [ -z "$files" ]; then
             echo "ℹ️ 未找到 Discussion 文件"
             exit 0
           fi
           
+          echo "📁 找到以下文件:"
+          echo "$files"
+          
+          # 获取仓库 ID 和分类 ID
+          echo ""
+          echo "📡 获取仓库信息..."
+          repo_info=$(gh api graphql -f query='query($owner: String!, $name: String!) { 
+            repository(owner: $owner, name: $name) { 
+              id 
+              discussionCategories(first: 1) { nodes { id } } 
+            } 
+          }' \
+            -F owner="${{ github.repository_owner }}" \
+            -F name="${{ github.event.repository.name }}")
+          
+          repo_id=$(echo "$repo_info" | jq -r '.data.repository.id')
+          category_id=$(echo "$repo_info" | jq -r '.data.repository.discussionCategories.nodes[0].id')
+          
+          echo "   仓库 ID: $repo_id"
+          echo "   分类 ID: $category_id"
+          
+          # 获取所有现有讨论
+          echo ""
+          echo "📋 获取现有讨论列表..."
+          all_discussions=$(gh api graphql -f query='query($owner: String!, $name: String!) { 
+            repository(owner: $owner, name: $name) { 
+              discussions(first: 100) { 
+                nodes { id, title } 
+              } 
+            } 
+          }' \
+            -F owner="${{ github.repository_owner }}" \
+            -F name="${{ github.event.repository.name }}")
+          
+          # 保存讨论列表到临时文件
+          echo "$all_discussions" | jq -r '.data.repository.discussions.nodes[] | "\(.id)\t\(.title)"' > /tmp/discussions.txt
+          echo "   找到 $(wc -l < /tmp/discussions.txt) 个现有讨论"
+          
+          # 处理每个文件
           for file in $files; do
             echo ""
             echo "🔖 处理文件：$file"
@@ -50,72 +82,43 @@ jobs:
             title=$(echo "$content" | head -1 | sed 's/^# //')
             echo "   标题：$title"
             
-            # 提取正文（去掉第一行标题），并转义特殊字符
-            body=$(echo "$content" | tail -n +2 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
+            # 提取正文（去掉第一行标题）
+            body=$(echo "$content" | tail -n +2)
             
-            # 获取仓库信息
-            repo_info=$(gh api graphql \
-              -f query='query($owner: String!, $name: String!) { 
-                repository(owner: $owner, name: $name) { 
-                  id 
-                  discussionCategories(first: 1) { nodes { id name } } 
-                } 
-              }' \
-              -F owner="${{ github.repository_owner }}" \
-              -F name="${{ github.event.repository.name }}" \
-              --jq '.data.repository')
+            # 搜索是否已存在（精确匹配标题）
+            existing_id=$(grep -F "$title" /tmp/discussions.txt | cut -f1 | head -1 || echo "")
             
-            repo_id=$(echo "$repo_info" | jq -r '.id')
-            category_id=$(echo "$repo_info" | jq -r '.discussionCategories.nodes[0].id')
-            
-            echo "   仓库 ID: $repo_id"
-            echo "   分类 ID: $category_id"
-            
-            # 搜索现有讨论
-            echo "   搜索现有讨论..."
-            existing=$(gh api graphql \
-              -f query='query($owner: String!, $repo: String!) { 
-                repository(owner: $owner, name: $repo) { 
-                  discussions(first: 100) { 
-                    nodes { id title } 
-                  } 
-                } 
-              }' \
-              -F owner="${{ github.repository_owner }}" \
-              -F repo="${{ github.event.repository.name }}" \
-              --jq ".data.repository.discussions.nodes[] | select(.title == \"$title\") | .id" || echo "")
-            
-            if [ -n "$existing" ]; then
-              echo "   ✅ 找到现有讨论，更新中..."
-              # 更新讨论
-              gh api graphql \
-                -f query='mutation($discussionId: ID!, $body: String!) { 
-                  updateDiscussion(input: {discussionId: $discussionId, body: $body}) { 
-                    discussion { url } 
-                  } 
-                }' \
-                -F discussionId="$existing" \
-                -F body="$body" \
-                --jq '.data.updateDiscussion.discussion.url' && echo "   📍 更新完成" || echo "   ❌ 更新失败"
+            if [ -n "$existing_id" ]; then
+              echo "   ✅ 找到现有讨论 (ID: $existing_id)，更新中..."
+              
+              # 更新讨论 - 使用正确的 GraphQL 语法
+              result=$(gh api graphql \
+                -f query='mutation($input: UpdateDiscussionInput!) { updateDiscussion(input: $input) { discussion { url } } }' \
+                -F input.discussionId="$existing_id" \
+                -F input.body="$body" 2>&1)
+              
+              if echo "$result" | grep -q '"url"'; then
+                url=$(echo "$result" | jq -r '.data.updateDiscussion.discussion.url')
+                echo "   📍 更新成功：$url"
+              else
+                echo "   ❌ 更新失败：$result"
+              fi
             else
               echo "   ✨ 创建新讨论..."
-              # 创建讨论
-              result=$(gh api graphql \
-                -f query='mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) { 
-                  createDiscussion(input: {repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body}) { 
-                    discussion { url } 
-                  } 
-                }' \
-                -F repositoryId="$repo_id" \
-                -F categoryId="$category_id" \
-                -F title="$title" \
-                -F body="$body" \
-                --jq '.data.createDiscussion.discussion.url')
               
-              if [ -n "$result" ]; then
-                echo "   🎉 创建成功！URL: $result"
+              # 创建讨论 - 使用正确的 GraphQL 语法
+              result=$(gh api graphql \
+                -f query='mutation($input: CreateDiscussionInput!) { createDiscussion(input: $input) { discussion { url } } }' \
+                -F input.repositoryId="$repo_id" \
+                -F input.categoryId="$category_id" \
+                -F input.title="$title" \
+                -F input.body="$body" 2>&1)
+              
+              if echo "$result" | grep -q '"url"'; then
+                url=$(echo "$result" | jq -r '.data.createDiscussion.discussion.url')
+                echo "   🎉 创建成功：$url"
               else
-                echo "   ❌ 创建失败，请检查权限设置"
+                echo "   ❌ 创建失败：$result"
               fi
             fi
           done
