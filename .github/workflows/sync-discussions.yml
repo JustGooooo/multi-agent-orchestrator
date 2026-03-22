@@ -74,45 +74,43 @@ jobs:
             # 搜索现有讨论
             echo "   搜索现有讨论..."
             existing=$(gh api graphql \
-              -f query='query($owner: String!, $repo: String!, $title: String!) { 
+              -f query='query($owner: String!, $repo: String!) { 
                 repository(owner: $owner, name: $repo) { 
-                  discussions(first: 50, query: $title) { 
+                  discussions(first: 100) { 
                     nodes { id title } 
                   } 
                 } 
               }' \
               -F owner="${{ github.repository_owner }}" \
               -F repo="${{ github.event.repository.name }}" \
-              -F title="$title" \
-              --jq '.data.repository.discussions.nodes[] | select(.title == $title) | .id' || echo "")
+              --jq ".data.repository.discussions.nodes[] | select(.title == \"$title\") | .id" || echo "")
             
             if [ -n "$existing" ]; then
               echo "   ✅ 找到现有讨论，更新中..."
-              # 更新讨论（简化版，只更新 body）
+              # 更新讨论
               gh api graphql \
-                -f query='mutation($input: UpdateDiscussionInput!) { 
-                  updateDiscussion(input: $input) { 
+                -f query='mutation($discussionId: ID!, $body: String!) { 
+                  updateDiscussion(input: {discussionId: $discussionId, body: $body}) { 
                     discussion { url } 
                   } 
                 }' \
-                -F input.discussionId="$existing" \
-                -F input.body="$body" \
-                --jq '.data.updateDiscussion.discussion.url' || echo "更新失败"
-              echo "   📍 更新完成"
+                -F discussionId="$existing" \
+                -F body="$body" \
+                --jq '.data.updateDiscussion.discussion.url' && echo "   📍 更新完成" || echo "   ❌ 更新失败"
             else
               echo "   ✨ 创建新讨论..."
               # 创建讨论
               result=$(gh api graphql \
-                -f query='mutation($input: CreateDiscussionInput!) { 
-                  createDiscussion(input: $input) { 
+                -f query='mutation($repositoryId: ID!, $categoryId: ID!, $title: String!, $body: String!) { 
+                  createDiscussion(input: {repositoryId: $repositoryId, categoryId: $categoryId, title: $title, body: $body}) { 
                     discussion { url } 
                   } 
                 }' \
-                -F input.repositoryId="$repo_id" \
-                -F input.categoryId="$category_id" \
-                -F input.title="$title" \
-                -F input.body="$body" \
-                --jq '.data.createDiscussion.discussion.url' || echo "")
+                -F repositoryId="$repo_id" \
+                -F categoryId="$category_id" \
+                -F title="$title" \
+                -F body="$body" \
+                --jq '.data.createDiscussion.discussion.url')
               
               if [ -n "$result" ]; then
                 echo "   🎉 创建成功！URL: $result"
