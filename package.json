@@ -1,0 +1,27 @@
+{
+  "name": "multi-agent-orchestrator",
+  "version": "1.0.0",
+  "description": "基于 OpenClaw 的多 Agent 协作架构框架",
+  "main": "src/orchestrator.js",
+  "scripts": {
+    "example:basic": "node examples/basic-usage.js",
+    "example:parallel": "node examples/parallel-tasks.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "openclaw",
+    "multi-agent",
+    "orchestrator",
+    "task-queue",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/multi-agent-orchestrator.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "agents": [
+    {
+      "id": "coder-1",
+      "type": "acp",
+      "specialty": "coding",
+      "model": "qwen-coder-plus",
+      "description": "专业编码 Agent，处理复杂开发任务"
+    },
+    {
+      "id": "coder-2",
+      "type": "acp",
+      "specialty": "coding",
+      "model": "qwen-coder-plus",
+      "description": "备用编码 Agent"
+    },
+    {
+      "id": "researcher-1",
+      "type": "subagent",
+      "specialty": "research",
+      "model": "qwen3.5-plus",
+      "description": "研究分析 Agent，处理信息搜集和整理"
+    },
+    {
+      "id": "writer-1",
+      "type": "subagent",
+      "specialty": "writing",
+      "model": "qwen3.5-plus",
+      "description": "文案写作 Agent，处理文档和内容创作"
+    },
+    {
+      "id": "reviewer-1",
+      "type": "subagent",
+      "specialty": "review",
+      "model": "qwen3.5-plus",
+      "description": "代码审查 Agent，处理代码审核和质量检查"
+    }
+  ],
+  "taskTypeMapping": {
+    "coding": ["coder-1", "coder-2"],
+    "development": ["coder-1", "coder-2"],
+    "research": ["researcher-1"],
+    "analysis": ["researcher-1"],
+    "writing": ["writer-1"],
+    "documentation": ["writer-1"],
+    "review": ["reviewer-1"],
+    "testing": ["coder-1", "reviewer-1"]
+  }
+}

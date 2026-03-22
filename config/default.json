@@ -1,0 +1,33 @@
+{
+  "orchestrator": {
+    "maxConcurrency": 5,
+    "retryAttempts": 3,
+    "defaultTimeout": 300
+  },
+  "taskQueue": {
+    "enabled": true,
+    "persistPath": "./data/queue.json"
+  },
+  "logging": {
+    "level": "info",
+    "format": "json",
+    "outputPath": "./logs/orchestrator.log"
+  },
+  "agents": {
+    "subagent": {
+      "defaultModel": "qwen3.5-plus",
+      "cleanup": "delete",
+      "mode": "run"
+    },
+    "acp": {
+      "defaultModel": "qwen-coder-plus",
+      "cleanup": "keep",
+      "mode": "run"
+    }
+  },
+  "resultAggregator": {
+    "format": "markdown",
+    "includeErrors": true,
+    "includeExecutionTime": true
+  }
+}
