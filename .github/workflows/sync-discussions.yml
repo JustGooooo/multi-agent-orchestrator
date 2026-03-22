@@ -50,8 +50,8 @@ jobs:
             title=$(echo "$content" | head -1 | sed 's/^# //')
             echo "   标题：$title"
             
-            # 提取正文（去掉第一行标题）
-            body=$(echo "$content" | tail -n +2)
+            # 提取正文（去掉第一行标题），并转义特殊字符
+            body=$(echo "$content" | tail -n +2 | sed 's/"/\\"/g' | sed ':a;N;$!ba;s/\n/\\n/g')
             
             # 获取仓库信息
             repo_info=$(gh api graphql \
