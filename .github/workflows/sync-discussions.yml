@@ -1,0 +1,148 @@
+name: Sync Discussions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/DISCUSSIONS/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  discussions: write
+
+jobs:
+  sync-discussions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed discussion files
+        id: changed-files
+        uses: tj-actions/changed-files@v41
+        with:
+          files: '.github/DISCUSSIONS/**/*.md'
+
+      - name: Sync each discussion
+        if: steps.changed-files.outputs.any_changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGED_FILES: ${{ steps.changed-files.outputs.all_changed_files }}
+        run: |
+          echo "📝 检测到以下 Discussion 文件变更:"
+          echo "$CHANGED_FILES"
+          
+          for file in $CHANGED_FILES; do
+            echo ""
+            echo "🔖 处理文件：$file"
+            
+            # 提取文件名（不含路径和扩展名）作为讨论标识
+            discussion_slug=$(basename "$file" .md)
+            echo "   标识符：$discussion_slug"
+            
+            # 读取文件内容
+            content=$(cat "$file")
+            
+            # 提取标题（第一行去掉 #）
+            title=$(echo "$content" | head -1 | sed 's/^# //')
+            echo "   标题：$title"
+            
+            # 提取正文（去掉第一行标题）
+            body=$(echo "$content" | tail -n +2)
+            
+            # 使用 GraphQL API 创建/更新 Discussion
+            # 先搜索是否已存在相同标题的讨论
+            echo "   搜索现有讨论..."
+            
+            search_result=$(gh api graphql \
+              -f query='query($owner: String!, $repo: String!, $title: String!) { 
+                repository(owner: $owner, name: $repo) { 
+                  discussions(first: 100, query: $title) { 
+                    nodes { 
+                      id 
+                      title 
+                      body 
+                      url 
+                    } 
+                  } 
+                } 
+              }' \
+              -F owner="${{ github.repository_owner }}" \
+              -F repo="${{ github.event.repository.name }}" \
+              -F title="$title" \
+              --jq '.data.repository.discussions.nodes[] | select(.title == $title)')
+            
+            if [ -n "$search_result" ]; then
+              # 已存在，更新讨论
+              discussion_id=$(echo "$search_result" | jq -r '.id')
+              echo "   ✅ 找到现有讨论，更新中..."
+              
+              update_result=$(gh api graphql \
+                -f query='mutation($input: UpdateDiscussionInput!) { 
+                  updateDiscussion(input: $input) { 
+                    discussion { 
+                      id 
+                      url 
+                      updatedAt 
+                    } 
+                  } 
+                }' \
+                -F input.repositoryId="${{ github.event.repository.node_id }}" \
+                -F input.discussionId="$discussion_id" \
+                -F input.body="$body" \
+                --jq '.data.updateDiscussion.discussion.url')
+              
+              echo "   📍 更新后的 URL: $update_result"
+            else
+              # 不存在，创建新讨论
+              echo "   ✨ 创建新讨论..."
+              
+              # 获取默认分类 ID
+              category_result=$(gh api graphql \
+                -f query='query($owner: String!, $repo: String!) { 
+                  repository(owner: $owner, name: $repo) { 
+                    discussionCategories(first: 1) { 
+                      nodes { 
+                        id 
+                        name 
+                      } 
+                    } 
+                  } 
+                }' \
+                -F owner="${{ github.repository_owner }}" \
+                -F repo="${{ github.event.repository.name }}" \
+                --jq '.data.repository.discussionCategories.nodes[0].id')
+              
+              echo "   使用分类 ID: $category_result"
+              
+              # 创建讨论
+              create_result=$(gh api graphql \
+                -f query='mutation($input: CreateDiscussionInput!) { 
+                  createDiscussion(input: $input) { 
+                    discussion { 
+                      id 
+                      url 
+                      createdAt 
+                    } 
+                  } 
+                }' \
+                -F input.repositoryId="${{ github.event.repository.node_id }}" \
+                -F input.categoryId="$category_result" \
+                -F input.title="$title" \
+                -F input.body="$body" \
+                --jq '.data.createDiscussion.discussion.url')
+              
+              echo "   🎉 创建成功！URL: $create_result"
+            fi
+          done
+          
+          echo ""
+          echo "✅ 所有 Discussion 同步完成！"
+
+      - name: No changes detected
+        if: steps.changed-files.outputs.any_changed != 'true'
+        run: |
+          echo "ℹ️ 没有检测到 Discussion 文件变更"
