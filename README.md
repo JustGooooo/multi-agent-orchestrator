@@ -124,9 +124,69 @@ interface TaskDefinition {
 }
 ```
 
-## 🏗️ 架构设计
+## 📚 文档
 
-详见 [docs/architecture.md](docs/architecture.md)
+| 文档 | 说明 |
+|------|------|
+| [使用指南](docs/USAGE.md) | 详细的使用教程和 API 参考 |
+| [架构设计](docs/architecture.md) | 系统架构和设计说明 |
+
+## 🎯 使用场景
+
+- **并行任务执行** - 同时分析多个代码模块、批量生成文档
+- **流水线处理** - 需求分析 → 编码实现 → 代码审查
+- **定时任务** - 每日代码质量检查、定期数据同步
+- **批量处理** - 多接口文档生成、多语言翻译
+
+## 💡 快速示例
+
+### 并行分析多个模块
+
+```javascript
+const modules = ['auth', 'database', 'api', 'cache'];
+
+await Promise.all(
+  modules.map(module => 
+    orchestrator.submitTask({
+      id: `analyze-${module}`,
+      type: 'analysis',
+      payload: { task: `分析 ${module} 模块的代码质量` },
+      priority: 'medium'
+    })
+  )
+);
+
+const result = await orchestrator.execute();
+console.log(result.summary);
+```
+
+### 流水线任务
+
+```javascript
+// 1. 需求分析
+await orchestrator.submitTask({
+  id: 'step-1',
+  type: 'analysis',
+  payload: { task: '分析需求文档...' }
+});
+const analysis = await orchestrator.execute();
+
+// 2. 编码实现
+await orchestrator.submitTask({
+  id: 'step-2',
+  type: 'coding',
+  payload: { task: '实现代码...', context: analysis.results[0].result }
+});
+const code = await orchestrator.execute();
+
+// 3. 代码审查
+await orchestrator.submitTask({
+  id: 'step-3',
+  type: 'review',
+  payload: { task: '审查代码...', codeReview: code.results[0].result }
+});
+await orchestrator.execute();
+```
 
 ## 📝 许可证
 
