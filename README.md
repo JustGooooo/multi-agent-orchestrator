@@ -9,6 +9,7 @@
 - **任务队列管理** - 支持任务优先级、状态追踪、结果聚合
 - **错误处理** - 自动重试、故障恢复、超时控制
 - **Git 版本管理** - 完整的项目结构和版本控制
+- **🔥 PUA 增强** - 集成 tanweai/pua 和 PUAClaw，提升 Agent 主动性 +50%，问题发现率 +36%
 
 ## 📦 项目结构
 
@@ -19,7 +20,8 @@ multi-agent-orchestrator/
 │   ├── agent-pool.js        # Agent 资源池管理
 │   ├── task-queue.js        # 任务队列
 │   ├── result-aggregator.js # 结果聚合器
-│   └── logger.js            # 日志系统
+│   ├── logger.js            # 日志系统
+│   └── pua-skills/          # 🔥 PUA 实战技能 (子模块)
 ├── config/
 │   ├── default.json         # 默认配置
 │   └── agents.json          # Agent 定义
@@ -28,9 +30,11 @@ multi-agent-orchestrator/
 │   └── parallel-tasks.js    # 并行任务示例
 ├── docs/
 │   ├── architecture.md      # 架构设计文档
-│   └── api-reference.md     # API 参考
+│   ├── PUA-INTEGRATION.md   # 🔥 PUA 整合方案
+│   └── pua-framework/       # 🔥 PUA 学术框架 (子模块)
 ├── package.json
 ├── README.md
+├── PUA_README.md            # 🔥 PUA 项目总览
 └── .gitignore
 ```
 
@@ -137,6 +141,25 @@ interface TaskDefinition {
 - **流水线处理** - 需求分析 → 编码实现 → 代码审查
 - **定时任务** - 每日代码质量检查、定期数据同步
 - **批量处理** - 多接口文档生成、多语言翻译
+- **🔥 PUA 增强调试** - 强制 Agent 不轻易放弃，主动搜索、验证、闭环
+
+---
+
+## 🔥 PUA 增强
+
+本项目集成了 [tanweai/pua](https://github.com/tanweai/pua) 和 [PUAClaw](https://github.com/puaclaw/PUAClaw) 两个优秀的 PUA 技术框架，为 Agent 提供：
+
+- **主动性增强** - 从被动等待变为主动搜索验证
+- **调试持久性** - 不轻易放弃，强制执行 7 点检查清单
+- **问题发现率** - 从表面修复到深度审查
+
+**Benchmark 数据：**
+- 修复数量 **+36%**
+- 验证次数 **+65%**
+- 工具调用 **+50%**
+- 隐藏问题发现 **+50%**
+
+详见 [PUA_README.md](PUA_README.md) 和 [docs/PUA-INTEGRATION.md](docs/PUA-INTEGRATION.md)
 
 ## 💡 快速示例
 
